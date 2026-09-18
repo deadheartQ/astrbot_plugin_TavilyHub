@@ -1,0 +1,18 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+.venv/
+venv/
+
+.env
+*.log
+
+# 插件运行时数据（AstrBot 约定持久化数据放在 data 目录，不入库）
+data/
+
+.vscode/
+.idea/
+.DS_Store

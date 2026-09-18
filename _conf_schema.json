@@ -1,0 +1,220 @@
+{
+  "provider": {
+    "description": "后端服务",
+    "type": "string",
+    "options": ["hub", "official"],
+    "default": "hub",
+    "obvious_hint": true,
+    "hint": "hub = Tavily Hub 国内中转（tavily.sharyuke.com，国内直连，Key 前缀 thb-）；official = Tavily 官方（api.tavily.com，国内需代理，Key 前缀 tvly-）"
+  },
+  "api_key": {
+    "description": "API Key",
+    "type": "string",
+    "secret": true,
+    "obvious_hint": true,
+    "hint": "hub 模式填 Tavily Hub 控制台生成的 thb- 开头 Key；official 模式填 app.tavily.com 的 tvly- 开头 Key。留空则读取环境变量 TAVILY_API_KEY",
+    "default": ""
+  },
+  "api_base": {
+    "description": "自定义 API 地址",
+    "type": "string",
+    "hint": "留空自动：hub -> https://tavily.sharyuke.com，official -> https://api.tavily.com。自建中转可填自己的地址（hub 模式会拼 /api/proxy/*）",
+    "default": ""
+  },
+  "timeout": {
+    "description": "请求超时时间（秒）",
+    "type": "int",
+    "default": 30
+  },
+  "proxy": {
+    "description": "HTTP 代理地址",
+    "type": "string",
+    "hint": "例如 http://127.0.0.1:7890。hub 模式国内直连，一般留空；official 模式国内必须填",
+    "default": ""
+  },
+  "trust_env": {
+    "description": "自动读取系统代理环境变量",
+    "type": "bool",
+    "hint": "默认关闭，保证 Hub 直连走国内线路。official 模式或需要代理时打开",
+    "default": false
+  },
+  "topic": {
+    "description": "默认搜索类型",
+    "type": "string",
+    "hint": "general 通用搜索；news 新闻资讯；finance 财经信息",
+    "options": ["general", "news", "finance"],
+    "default": "general"
+  },
+  "search_depth": {
+    "description": "搜索深度",
+    "type": "string",
+    "hint": "basic 便宜够用；advanced 更全但消耗更多额度；fast / ultra-fast 仅 official 模式支持，hub 模式会自动回落 basic",
+    "options": ["basic", "advanced", "fast", "ultra-fast"],
+    "default": "basic"
+  },
+  "max_results": {
+    "description": "默认返回结果条数",
+    "type": "int",
+    "hint": "建议 3-8，条数越多 token 消耗越大",
+    "default": 5
+  },
+  "include_answer": {
+    "description": "是否返回 AI 摘要",
+    "type": "bool",
+    "hint": "开启后结果开头会有一段整合摘要，推荐开启",
+    "default": true
+  },
+  "include_images": {
+    "description": "是否返回相关图片链接",
+    "type": "bool",
+    "default": false
+  },
+  "include_raw_content": {
+    "description": "是否返回网页完整正文",
+    "type": "bool",
+    "hint": "开启后内容更全但会显著增加 token 消耗",
+    "default": false
+  },
+  "chunks_per_source": {
+    "description": "每个来源返回的正文分片数（需先开启完整正文）",
+    "type": "int",
+    "hint": "0 表示不传该参数",
+    "default": 0
+  },
+  "time_range": {
+    "description": "时间范围过滤",
+    "type": "string",
+    "hint": "留空表示不限时间",
+    "options": ["", "day", "week", "month", "year"],
+    "default": ""
+  },
+  "news_days": {
+    "description": "新闻回溯天数（仅 topic=news 时生效）",
+    "type": "int",
+    "hint": "0 表示不限制",
+    "default": 3
+  },
+  "country": {
+    "description": "搜索结果偏向的国家（英文小写，如 china、united states）",
+    "type": "string",
+    "hint": "仅 general 类型生效，留空表示不限",
+    "default": ""
+  },
+  "include_domains": {
+    "description": "只搜索这些域名",
+    "type": "list",
+    "hint": "例如 github.com、docs.astrbot.app，留空表示不限",
+    "default": []
+  },
+  "exclude_domains": {
+    "description": "排除这些域名",
+    "type": "list",
+    "hint": "留空表示不排除",
+    "default": []
+  },
+  "enable_llm_tool": {
+    "description": "开启 LLM 自动调用搜索",
+    "type": "bool",
+    "hint": "开启后模型会在需要实时信息时自动调用 tavily_web_search 等工具，无需用户输命令",
+    "default": true
+  },
+  "inject_priority_prompt": {
+    "description": "向模型注入搜索工具优先级规则",
+    "type": "bool",
+    "hint": "开启后会在系统提示词追加一段固定规则：优先用 tavily_web_search，只有它不可用时才改用自带的 web_search。关闭则完全由模型自行选择",
+    "default": true
+  },
+  "priority_prompt": {
+    "description": "注入的优先级规则文本",
+    "type": "text",
+    "hint": "留空则使用插件内置默认规则。只有想自定义措辞时才改。注意：这段内容每轮必须保持一致，否则会破坏模型服务端的提示词缓存",
+    "default": "## 联网搜索工具使用优先级\n需要检索实时信息（新闻、股价、天气、最新资料等）时，严格按以下顺序选择工具：\n1. 首选 tavily_web_search：本插件提供的搜索，速度快且结果带来源链接。\n2. 只有当 tavily_web_search 明确返回“不可用 / 额度耗尽”时，才改用 web_search 或 fetch_url。\n3. 若上述工具都不可用，直接告诉用户当前无法联网检索，绝对不要编造答案。\n不要为同一个问题并行或重复调用多个搜索工具。"
+  },
+  "fallback_tool_name": {
+    "description": "降级时让模型改用的工具名",
+    "type": "string",
+    "hint": "AstrBot 自带联网搜索的内置工具名为 web_search（网页抓取为 fetch_url），一般不用改",
+    "default": "web_search"
+  },
+  "quota_cooldown": {
+    "description": "额度耗尽后的冷却时间（秒）",
+    "type": "int",
+    "hint": "冷却期内插件不再请求 Tavily，直接让模型改用自带搜索，冷却结束后自动重试一次。默认 3600（1 小时）",
+    "default": 3600
+  },
+  "content_max_chars": {
+    "description": "每条结果摘要的最大字符数",
+    "type": "int",
+    "default": 400
+  },
+  "answer_max_chars": {
+    "description": "AI 摘要的最大字符数",
+    "type": "int",
+    "default": 800
+  },
+  "raw_max_chars": {
+    "description": "网页正文抽取结果的最大字符数",
+    "type": "int",
+    "default": 1500
+  },
+  "crawl_content_max_chars": {
+    "description": "爬取结果中每个页面预览的最大字符数",
+    "type": "int",
+    "default": 300
+  },
+  "map_show_limit": {
+    "description": "站点地图最多展示多少条链接",
+    "type": "int",
+    "default": 50
+  },
+  "llm_result_max_chars": {
+    "description": "交给 LLM 的搜索结果最大字符数",
+    "type": "int",
+    "hint": "防止单条工具返回过长撑爆上下文",
+    "default": 4000
+  },
+  "max_images": {
+    "description": "最多展示多少张图片链接",
+    "type": "int",
+    "default": 3
+  },
+  "crawl_max_depth": {
+    "description": "爬取最大深度",
+    "type": "int",
+    "default": 2
+  },
+  "crawl_limit": {
+    "description": "爬取总页面数上限",
+    "type": "int",
+    "default": 10
+  },
+  "crawl_extract_depth": {
+    "description": "爬取时的页面抽取深度",
+    "type": "string",
+    "options": ["basic", "advanced"],
+    "default": "basic"
+  },
+  "crawl_instructions": {
+    "description": "爬取引导语（自然语言）",
+    "type": "string",
+    "hint": "告诉爬虫优先爬哪些内容，留空则不限制",
+    "default": ""
+  },
+  "map_max_depth": {
+    "description": "站点地图最大深度",
+    "type": "int",
+    "hint": "范围 1-5",
+    "default": 1
+  },
+  "map_limit": {
+    "description": "站点地图返回链接数上限",
+    "type": "int",
+    "default": 50
+  },
+  "map_instructions": {
+    "description": "站点地图过滤指令（自然语言）",
+    "type": "string",
+    "hint": "启用后按 Hub 规则额外计费，留空则不过滤",
+    "default": ""
+  }
+}
