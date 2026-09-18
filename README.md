@@ -1,4 +1,4 @@
-# astrbot_plugin_tavily
+# astrbot_plugin_Tavily Hub
 
 给 AstrBot 接入 **Tavily Hub** 联网搜索的插件。
 
