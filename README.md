@@ -1,19 +1,24 @@
 # astrbot_plugin_tavily
 
-给 AstrBot 接入联网搜索的插件，默认走 **Tavily Hub** 国内中转，也能切成 Tavily 官方。命令能用，也能让模型自己调。
+给 AstrBot 接入 **Tavily Hub** 联网搜索的插件。命令能用，也能让模型自己调；额度耗尽会自动降级到 AstrBot 自带联网搜索。
 
-## 两种后端
+## 为什么只做 Hub
 
-| provider | 地址 | Key 前缀 | 说明 |
-| --- | --- | --- | --- |
-| `hub`（默认） | `https://tavily.sharyuke.com` | `thb-` | 国内机房直连，平均 <100ms，无需代理，注册送 3600 次/月 |
-| `official` | `https://api.tavily.com` | `tvly-` | 官方接口，国内必须配代理 |
+插件只接 Tavily Hub（`https://tavily.sharyuke.com`，国内中转），**不再内置 Tavily 官方接口**——因为 AstrBot 自带的联网搜索已经支持官方 Tavily 了（配置 → AI → 能力 → Web Search，provider 选 `tavily`）。
 
-在插件配置的 `provider` 里切换。注意：**两个服务的 Key 不通用**，官方的 `tvly-` Key 拿去打 Hub 会返回 `40301 无效的 API Key`。
+两者分工：
+
+| 需求 | 用什么 |
+| --- | --- |
+| 国内直连、低延迟、免费 3600 次/月、**自带 crawl / map** | 本插件（Tavily Hub） |
+| Tavily 官方接口 | AstrBot 自带联网搜索 |
+| 兜底 | 本插件额度耗尽 → 自动降级到自带搜索 |
+
+两者 Key 不通用：官方的 `tvly-` Key 拿去打 Hub 会返回 `40301 无效的 API Key`，必须用 Hub 控制台生成的 `thb-` Key。
 
 ## 拿 Key
 
-1. 注册 https://tavily.sharyuke.com
+1. 注册 https://tavily.sharyuke.com（国内邮箱，无需信用卡）
 2. 控制台创建 API Key（形如 `thb-xxxxxxxx`）
 3. 填进插件配置的 `api_key`
 
@@ -28,7 +33,7 @@
 2. 重启 AstrBot（或在管理面板重载插件）。
 3. 在 **管理面板 → 插件 → Tavily 联网搜索 → 配置** 里填 `api_key`。
 
-Hub 模式国内直连即可，**不要开代理**，否则绕去国外反而慢。只有 `official` 模式才需要填 `proxy` 或打开 `trust_env`。
+Hub 是国内机房，直连即可，**不要开代理**，否则绕去国外反而慢。
 
 ## 功能
 
@@ -44,15 +49,15 @@ Hub 模式国内直连即可，**不要开代理**，否则绕去国外反而慢
 | LLM 自动读网页 | 工具 `tavily_extract_url` |
 | LLM 摸站点结构 | 工具 `tavily_crawl_site` |
 
-## Hub 与官方的差异（插件已自动处理）
+## Hub 接口的坑（插件已自动处理）
 
 1. **HTTP 状态码恒为 200**。错误藏在响应体的 `code` 字段里，`code == 0` 才是成功。只看 HTTP status 判断成败会把错误当成功。
 2. **响应包两层**。真正的结果在 `data.data`，不是顶层：
    ```json
    {"code":0,"message":"ok","data":{"ok":true,"data":{"results":[...]},"credits":1}}
    ```
-3. **搜索深度只有 `basic` / `advanced`**。选 `fast` / `ultra-fast` 时插件会自动回落 `basic`。
-4. **extract 只接受 `urls`**，`extract_depth` / `format` 是官方专有参数。
+3. **搜索深度只有 `basic` / `advanced`**。
+4. **extract 只接受 `urls`**，`extract_depth` / `format` 是官方专有参数，Hub 不支持。
 
 ## 配置项
 
@@ -60,9 +65,8 @@ Hub 模式国内直连即可，**不要开代理**，否则绕去国外反而慢
 
 | 配置 | 默认 | 说明 |
 | --- | --- | --- |
-| `provider` | `hub` | 后端选择 |
-| `api_key` | 空 | 必填 |
-| `api_base` | 空 | 自建中转可填，留空自动 |
+| `api_key` | 空 | 必填，`thb-` 开头 |
+| `api_base` | 空 | 自建中转可填，留空用 Hub |
 | `search_depth` | `basic` | `advanced` 更全但更贵 |
 | `max_results` | `5` | 返回条数 |
 | `include_answer` | `true` | 是否要 AI 摘要 |
@@ -70,7 +74,7 @@ Hub 模式国内直连即可，**不要开代理**，否则绕去国外反而慢
 | `time_range` | 空 | day / week / month / year |
 | `news_days` | `3` | 新闻回溯天数 |
 | `enable_llm_tool` | `true` | 允许模型自动调用 |
-| `proxy` / `trust_env` | 空 / `false` | Hub 模式都别开 |
+| `proxy` / `trust_env` | 空 / `false` | 直连即可，一般不用动 |
 
 其余是展示长度与 crawl / map 参数。
 
@@ -116,3 +120,7 @@ Args:
 ## 额度
 
 Hub 免费档 3600 次/月，不限制并发。`include_raw_content` + `advanced` 深度 + `crawl` 会明显加快消耗。
+
+## License
+
+MIT

@@ -1,24 +1,16 @@
 {
-  "provider": {
-    "description": "后端服务",
-    "type": "string",
-    "options": ["hub", "official"],
-    "default": "hub",
-    "obvious_hint": true,
-    "hint": "hub = Tavily Hub 国内中转（tavily.sharyuke.com，国内直连，Key 前缀 thb-）；official = Tavily 官方（api.tavily.com，国内需代理，Key 前缀 tvly-）"
-  },
   "api_key": {
-    "description": "API Key",
+    "description": "Tavily Hub API Key",
     "type": "string",
     "secret": true,
     "obvious_hint": true,
-    "hint": "hub 模式填 Tavily Hub 控制台生成的 thb- 开头 Key；official 模式填 app.tavily.com 的 tvly- 开头 Key。留空则读取环境变量 TAVILY_API_KEY",
+    "hint": "在 https://tavily.sharyuke.com 注册后于控制台创建，形如 thb-xxxxxxxx。留空则读取环境变量 TAVILY_API_KEY。注意官方 tvly- 开头的 Key 不能用于 Hub",
     "default": ""
   },
   "api_base": {
     "description": "自定义 API 地址",
     "type": "string",
-    "hint": "留空自动：hub -> https://tavily.sharyuke.com，official -> https://api.tavily.com。自建中转可填自己的地址（hub 模式会拼 /api/proxy/*）",
+    "hint": "留空使用 https://tavily.sharyuke.com。自建中转可填自己的地址，插件会自动拼接 /api/proxy/*",
     "default": ""
   },
   "timeout": {
@@ -29,13 +21,13 @@
   "proxy": {
     "description": "HTTP 代理地址",
     "type": "string",
-    "hint": "例如 http://127.0.0.1:7890。hub 模式国内直连，一般留空；official 模式国内必须填",
+    "hint": "例如 http://127.0.0.1:7890。Hub 国内机房直连，一般留空；只有自建中转或特殊网络环境才需要",
     "default": ""
   },
   "trust_env": {
     "description": "自动读取系统代理环境变量",
     "type": "bool",
-    "hint": "默认关闭，保证 Hub 直连走国内线路。official 模式或需要代理时打开",
+    "hint": "默认关闭，保证 Hub 直连走国内线路。若确需走系统代理再打开",
     "default": false
   },
   "topic": {
@@ -48,8 +40,8 @@
   "search_depth": {
     "description": "搜索深度",
     "type": "string",
-    "hint": "basic 便宜够用；advanced 更全但消耗更多额度；fast / ultra-fast 仅 official 模式支持，hub 模式会自动回落 basic",
-    "options": ["basic", "advanced", "fast", "ultra-fast"],
+    "hint": "basic 便宜够用；advanced 更全但消耗更多额度",
+    "options": ["basic", "advanced"],
     "default": "basic"
   },
   "max_results": {

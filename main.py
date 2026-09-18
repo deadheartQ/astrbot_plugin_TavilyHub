@@ -2,18 +2,14 @@
 astrbot_plugin_tavily
 =====================
 
-为 AstrBot 接入 Tavily 联网搜索能力。
+为 AstrBot 接入 Tavily Hub（https://tavily.sharyuke.com）联网搜索能力。
 
-支持两种后端（插件配置里用 provider 切换）：
+只走 Hub 中转：国内机房直连、无需代理、Key 前缀 thb-。
+Tavily 官方接口请直接用 AstrBot 自带的联网搜索
+（配置 → AI → 能力 → Web Search，provider 选 tavily）；
+本插件额度耗尽时会自动降级到它。
 
-* hub      : Tavily Hub 国内中转 https://tavily.sharyuke.com
-             路径 /api/proxy/{search,extract,crawl,map}
-             Key 前缀 thb-，国内直连无需代理
-* official : Tavily 官方 https://api.tavily.com
-             路径 /{search,extract}
-             Key 前缀 tvly-，国内需配代理
-
-Hub 与官方的两处关键差异（已在本插件内处理）：
+Hub 与 Tavily 官方的两处关键差异（已在本插件内处理）：
 1. Hub 的 HTTP 状态码恒为 200，真正的错误码在响应体 code 字段（0 才是成功）。
 2. Hub 的结果被包了两层：data.data 才是 Tavily 原生结构。
 
@@ -44,7 +40,6 @@ from astrbot.api.provider import ProviderRequest
 from astrbot.api.star import Context, Star, register
 
 HUB_BASE = "https://tavily.sharyuke.com"
-OFFICIAL_BASE = "https://api.tavily.com"
 
 # Hub 的业务错误码语义（HTTP 仍是 200）
 HUB_ERR_HINT = {
@@ -103,7 +98,7 @@ class TavilyPlugin(Star):
         self._session: Optional[aiohttp.ClientSession] = None
         # 额度熔断：触发额度类错误后，在冷却期内不再请求 Tavily，直接让模型降级
         self._quota_dead_until = 0.0
-        logger.info("[Tavily] 插件已加载，后端模式：%s", self.provider)
+        logger.info("[Tavily] 插件已加载，后端：Tavily Hub")
 
     async def initialize(self):
         """异步初始化（AstrBot 在实例化插件类后自动调用）。"""
@@ -122,11 +117,6 @@ class TavilyPlugin(Star):
         return default if value is None else value
 
     @property
-    def provider(self) -> str:
-        p = str(self.cfg("provider", "hub") or "hub").strip().lower()
-        return "official" if p == "official" else "hub"
-
-    @property
     def api_key(self) -> str:
         key = str(self.cfg("api_key", "") or "").strip()
         if not key:
@@ -136,14 +126,12 @@ class TavilyPlugin(Star):
     def _url(self, op: str) -> str:
         base = str(self.cfg("api_base", "") or "").strip().rstrip("/")
         if not base:
-            base = HUB_BASE if self.provider == "hub" else OFFICIAL_BASE
-        if self.provider == "hub":
-            return base + "/api/proxy/" + op
-        return base + "/" + op
+            base = HUB_BASE
+        return base + "/api/proxy/" + op
 
     def _depth(self) -> str:
         depth = str(self.cfg("search_depth", "basic") or "basic").strip()
-        if self.provider == "hub" and depth not in ("basic", "advanced"):
+        if depth not in ("basic", "advanced"):
             # Hub 只支持 basic / advanced
             logger.warning("[Tavily] Hub 不支持 %s 深度，已回落到 basic", depth)
             return "basic"
@@ -187,9 +175,6 @@ class TavilyPlugin(Star):
 
     def _unwrap(self, payload: Dict[str, Any]) -> Tuple[Dict[str, Any], Any]:
         """把 Hub / 官方的响应统一成 Tavily 原生结构。"""
-        if self.provider == "official":
-            return payload, payload.get("credits")
-
         # ---------- Hub ----------
         code = payload.get("code")
         if code not in (0, "0", None):
@@ -221,12 +206,11 @@ class TavilyPlugin(Star):
     async def _request(self, op: str, payload: Dict[str, Any]) -> Dict[str, Any]:
         key = self.api_key
         if not key:
-            where = "Tavily Hub 控制台" if self.provider == "hub" else "app.tavily.com"
-            raise TavilyError("未配置 API Key，请在插件配置面板填写（%s 获取）。" % where)
+            raise TavilyError(
+                "未配置 API Key，请在插件配置面板填写（Tavily Hub 控制台获取）。"
+            )
 
         body = dict(payload)
-        if self.provider == "official":
-            body["api_key"] = key
 
         headers = {
             "Authorization": "Bearer " + key,
@@ -312,14 +296,8 @@ class TavilyPlugin(Star):
         return await self._request("search", payload)
 
     async def extract(self, urls: List[str]) -> Dict[str, Any]:
-        if self.provider == "hub":
-            payload: Dict[str, Any] = {"urls": urls}
-        else:
-            payload = {
-                "urls": urls,
-                "extract_depth": self.cfg("extract_depth", "basic") or "basic",
-                "format": self.cfg("extract_format", "markdown") or "markdown",
-            }
+        # Hub 的 extract 只接受 urls
+        payload: Dict[str, Any] = {"urls": urls}
         return await self._request("extract", payload)
 
     async def crawl(self, url: str) -> Dict[str, Any]:
@@ -638,14 +616,14 @@ class TavilyPlugin(Star):
     async def cmd_help(self, event: AstrMessageEvent):
         """Tavily 搜索插件帮助"""
         yield event.plain_result(
-            "Tavily 搜索插件（后端：%s）\n"
+            "Tavily Hub 搜索插件\n"
             "/tavily 关键词   联网搜索（/tvly /search /搜索）\n"
             "/news 关键词     新闻检索（/新闻）\n"
             "/extract 网址    网页正文抽取（/抽取）\n"
             "/crawl 网址      整站爬取（/爬取）\n"
             "/map 网址        站点地图（/地图）\n"
             "/tavilyhelp      本帮助\n"
-            "开启 LLM 工具后，模型会在需要实时信息时自动调用搜索。" % self.provider
+            "开启 LLM 工具后，模型会在需要实时信息时自动调用搜索。"
         )
 
     # ------------------------------------------------------------------ #

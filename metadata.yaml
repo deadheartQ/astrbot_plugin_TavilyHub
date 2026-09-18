@@ -1,7 +1,7 @@
 name: astrbot_plugin_tavily
 display_name: Tavily 联网搜索
-desc: 接入 Tavily Hub（或官方）搜索 API，提供联网搜索、新闻检索、网页抽取、整站爬取、站点地图，并可注册为 LLM 工具让模型自动调用。
-short_desc: 一行命令联网搜索，也能让模型自己搜。支持 Tavily Hub 国内直连。
+desc: 接入 Tavily Hub 搜索 API，提供联网搜索、新闻检索、网页抽取、整站爬取、站点地图，可作为 LLM 工具自动调用，额度耗尽自动降级到 AstrBot 自带联网搜索。
+short_desc: 一行命令联网搜索，也能让模型自己搜。Tavily Hub 国内直连，额度耗尽自动降级。
 version: v1.1.0
 author: Buddy
 repo: https://github.com/AstrBotDevs/AstrBot
