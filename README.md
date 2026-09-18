@@ -1,13 +1,9 @@
 # astrbot_plugin_tavily
 
-给 AstrBot 接入 **Tavily Hub** 联网搜索的插件。命令能用，也能让模型自己调；额度耗尽会自动降级到 AstrBot 自带联网搜索。
+给 AstrBot 接入 **Tavily Hub** 联网搜索的插件。
 
-## 为什么只做 Hub
-
-插件只接 Tavily Hub（`https://tavily.sharyuke.com`，国内中转），**不再内置 Tavily 官方接口**——因为 AstrBot 自带的联网搜索已经支持官方 Tavily 了（配置 → AI → 能力 → Web Search，provider 选 `tavily`）。
 
 两者分工：
-
 | 需求 | 用什么 |
 | --- | --- |
 | 国内直连、低延迟、免费 3600 次/月、**自带 crawl / map** | 本插件（Tavily Hub） |
